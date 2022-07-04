@@ -384,7 +384,7 @@ def computeSuperTrend(df:pd.DataFrame,upper=False, lower=False)->pd.DataFrame:
     return df
 
 
-def computeMASlope(df:pd.DataFrame)->pd.DataFrame:
+def computeMASlope(df_true:pd.DataFrame)->pd.DataFrame:
     """Compute MA Slope indicator on a dataFrame.
 
     Args:
@@ -425,9 +425,10 @@ def computeMASlope(df:pd.DataFrame)->pd.DataFrame:
             df = pd.DataFrame(data = {"Close": self.Close, "High": self.High, "Low":self.Low})
             df['hh'] = df['High'].rolling(window=self.long_ma+1).max()
             df['ll'] = df['Low'].rolling(window=self.long_ma+1).min()
+           
             df = df.fillna(0)
-            df.loc[df['hh'] == df['ll'],'mult'] = 0
-            df.loc[df['hh'] != df['ll'],'mult'] = abs(2 * df['Close'] - df['ll'] - df['hh']) / (df['hh'] - df['ll'])
+            df['mult'] = 0
+            df['mult'].iloc[self.long_ma:] = abs(2 * df['Close'].iloc[self.long_ma:] - df['ll'].iloc[self.long_ma:] - df['hh'].iloc[self.long_ma:]) / (df['hh'].iloc[self.long_ma:] - df['ll'].iloc[self.long_ma:])
             df['final'] = df['mult'] * (minAlpha - majAlpha) + majAlpha
 
             ma_first = (df.iloc[0]['final']**2) * df.iloc[0]['Close']
@@ -445,7 +446,7 @@ def computeMASlope(df:pd.DataFrame)->pd.DataFrame:
             df['dt'] = (df['ma'].shift(2) - df['ma']) / df['Close'] * df['slope_range'] 
             df['c'] = (1+df['dt']*df['dt'])**0.5
             df['xangle'] = round(180*np.arccos(1/df['c']) / pi)
-            df.loc[df['dt']>0,"xangle"] = - df['xangle']
+            df[df['dt']>0]['xangle'] = - df[df['dt']>0]['xangle']
             self.df = df
             # print(df)
 
@@ -464,7 +465,7 @@ def computeMASlope(df:pd.DataFrame)->pd.DataFrame:
             return self.df['xangle']
             
         
-    ms = MaSlope(df.High, df.Low, df.Close)
-    df['Angle'] = ms.x_angle()
-    df['MA_Slope'] = ms.ma_line()
-    return df
+    ms = MaSlope(df_true.High, df_true.Low, df_true.Close)
+    df_true['Angle'] = ms.x_angle()
+    df_true['MA_Slope'] = ms.ma_line()
+    return df_true
