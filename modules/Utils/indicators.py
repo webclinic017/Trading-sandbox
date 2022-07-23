@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 import math
+from multiprocessing import cpu_count
 
 # Technical indicators
 from ta.momentum import stochrsi,rsi
@@ -153,7 +154,7 @@ def computeLaggingLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tr
         Returns:
             float: The coefficient a corresponding to the linear regression y=ax+b.
         """
-        model = LinearRegression().fit(x,y)
+        model = LinearRegression(n_jobs=cpu_count()).fit(x,y,)
         return model.coef_[0]
     
     df['B_MLR_coefs'] = np.nan
@@ -162,10 +163,10 @@ def computeLaggingLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tr
     if filter_ceof==True:
         df['B_MLR_coefs_filtered'] = filterData(df.B_MLR_coefs.values,filter_method)
         if derivative==True:
-            df['B_MLR_coefs_filtered_diff'] = df['B_MLR_coefs_filtered'].diff()
+            df['B_MLR_coefs_filtered_diff'] = df['B_MLR_coefs_filtered'].diff(3)
     else:
         if derivative==True:
-            df['B_MLR_coefs_diff'] = df['B_MLR_coefs'].diff()
+            df['B_MLR_coefs_diff'] = df['B_MLR_coefs'].diff(3)
     return df.dropna()
 
 

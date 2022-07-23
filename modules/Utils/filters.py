@@ -122,7 +122,7 @@ def filterData(data, method='dwt')->np.array:
         np.array: The filtered signal.
     """
     if method=='savgol':
-        return savgol_filter(data, 19, 2,mode='wrap',deriv=0)
+        return savgol_filter(data, 19, 2,mode='nearest',deriv=0)
     elif method=='fft':
         return  fft_denoiser(data, 20)
     elif method=='poly':

@@ -60,7 +60,7 @@ def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tru
     return df.dropna()
 
 
-def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:int=1000, ):
+def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:int=1000, optimization_process:bool=False):
     dfTest = df.copy()
 
     # -- Definition of dt, that will be the dataset to do your trades analyses --
@@ -214,27 +214,30 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
     winRateRatio = (totalGoodTrades/totalTrades) * 100
 
     reasons = dt['reason'].unique()
-    print("Period : [" + str(dfTest.index[0]) + "] -> [" +
-        str(dfTest.index[len(dfTest)-1]) + "]")
-    print("Starting balance :", initalWallet, "$")
+    if optimization_process==False:
+        print("Period : [" + str(dfTest.index[0]) + "] -> [" +
+            str(dfTest.index[len(dfTest)-1]) + "]")
+        print("Starting balance :", initalWallet, "$")
 
-    print("\n----- General Informations -----")
-    print("Final balance :", round(wallet, 2), "$")
-    print("Performance vs US Dollar :", round(algoPercentage, 2), "%")
-    print("Buy and Hold Performence :", round(holdPercentage, 2), "%")
-    print("Performance vs Buy and Hold :", round(vsHoldPercentage, 2), "%")
-    print("Best trade : +"+bestTrade, "%, the", idbest)
-    print("Worst trade :", worstTrade, "%, the", idworst)
-    print("Worst drawBack :", str(100*round(dt['drawBack'].min(), 2)), "%")
-    print("Total fees : ", round(dt['frais'].sum(), 2), "$")
+        print("\n----- General Informations -----")
+        print("Final balance :", round(wallet, 2), "$")
+        print("Performance vs US Dollar :", round(algoPercentage, 2), "%")
+        print("Buy and Hold Performence :", round(holdPercentage, 2), "%")
+        print("Performance vs Buy and Hold :", round(vsHoldPercentage, 2), "%")
+        print("Best trade : +"+bestTrade, "%, the", idbest)
+        print("Worst trade :", worstTrade, "%, the", idworst)
+        print("Worst drawBack :", str(100*round(dt['drawBack'].min(), 2)), "%")
+        print("Total fees : ", round(dt['frais'].sum(), 2), "$")
 
-    print("\n----- Trades Informations -----")
-    print("Total trades on period :",totalTrades)
-    print("Number of positive trades :", totalGoodTrades)
-    print("Number of negative trades : ", totalBadTrades)
-    print("Trades win rate ratio :", round(winRateRatio, 2), '%')
-    print("Average trades performance :",tradesPerformance,"%")
-    print("Average positive trades :", AveragePercentagePositivTrades, "%")
-    print("Average negative trades :", AveragePercentageNegativTrades, "%")
-    dt[['wallet', 'price']].plot(subplots=True, figsize=(20, 10))
-    print("\n----- Plot -----")
+        print("\n----- Trades Informations -----")
+        print("Total trades on period :",totalTrades)
+        print("Number of positive trades :", totalGoodTrades)
+        print("Number of negative trades : ", totalBadTrades)
+        print("Trades win rate ratio :", round(winRateRatio, 2), '%')
+        print("Average trades performance :",tradesPerformance,"%")
+        print("Average positive trades :", AveragePercentagePositivTrades, "%")
+        print("Average negative trades :", AveragePercentageNegativTrades, "%")
+        dt[['wallet', 'price']].plot(subplots=True, figsize=(20, 10))
+        print("\n----- Plot -----")
+    else:
+        return round(wallet, 2)
