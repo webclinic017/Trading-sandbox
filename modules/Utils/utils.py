@@ -13,7 +13,7 @@ def loadFromDB(path:str, keep_timestamp:bool=True)->pd.DataFrame:
         df['Timestamp'] = df['Date'].astype(int)
     df['Date'] = df['Date'].astype(int).apply(datetime.fromtimestamp)
     df = df.set_index('Date')
-    print(f"Total records : {len(df)} rows")
+    #print(f"Total records : {len(df)} rows")
     return df
 
 
@@ -60,7 +60,7 @@ def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tru
     return df.dropna()
 
 
-def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:int=1000, optimization_process:bool=False):
+def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:int=1000, optimization_process:bool=False, stop_loss:bool=False, take_profit:bool=False, tp:int=0,sl:int=0)->pd.DataFrame:
     dfTest = df.copy()
 
     # -- Definition of dt, that will be the dataset to do your trades analyses --
@@ -92,8 +92,11 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
             buyPrice = row['Close']
 
             # -- Define the price of you SL and TP or comment it if you don't want a SL or TP --
-            # stopLoss = buyPrice - 0.02 * buyPrice
-            # takeProfit = buyPrice + 0.04 * buyPrice
+            if take_profit == True:
+                takeProfit = buyPrice + tp * buyPrice
+                
+            if stop_loss == True:
+                stopLoss = buyPrice - sl * buyPrice
 
             coin = usdt / buyPrice
             fee = takerFee * coin
@@ -119,7 +122,7 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
             fee = makerFee * usdt
             usdt = usdt - fee
             coin = 0
-            buyReady = False
+            buyReady = True
             wallet = usdt
 
             # -- Check if your wallet hit a new ATH to know the drawBack --
@@ -133,6 +136,21 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
             myrow = {'date': index,'position': "Sell", 'reason':'Sell Stop Loss','price': sellPrice,'frais': fee,'fiat': usdt,'coins': coin,'wallet': wallet,'drawBack':(wallet-lastAth)/lastAth}
             dt = dt.append(myrow,ignore_index=True)    
 
+        elif row['High'] > takeProfit and coin > 0:
+            sellPrice = takeProfit
+
+            usdt = coin * sellPrice
+            fee = makerFee * usdt
+            usdt = usdt - fee
+            coin = 0
+            buyReady = True
+            wallet = usdt
+            if wallet > lastAth:
+                lastAth = wallet
+            # print("Sell COIN at Take Profit Loss",sellPrice,'$ the', index)
+            myrow = {'date': index,'position': "Sell", 'reason': 'Sell Take Profit', 'price': sellPrice, 'frais': fee, 'fiat': usdt, 'coins': coin, 'wallet': wallet, 'drawBack':(wallet-lastAth)/lastAth}
+            dt = dt.append(myrow,ignore_index=True) 
+            
         # -- Sell Market Order --
         elif sellConditionFunc(row, previousRow) and coin > 0 and sellReady == True:
 
