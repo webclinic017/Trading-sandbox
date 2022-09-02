@@ -112,6 +112,56 @@ def addIndicators(df:pd.DataFrame,b_engulfings:bool=False, derivative:bool=False
         df['HA_Low'] = df[['HA_Open', 'HA_Close', 'Low']].min(axis=1)
     return df.dropna()
 
+def generateDatesFeatures(df:pd.DataFrame,
+                          sin_cos:bool=True,
+                          date_in_index:bool=True,
+                          date_col=''):
+    """Generate date features from a dataframe.
+
+    Args:
+        df (pd.DataFrame): _description_
+        sin_cos (bool, optional): _description_. Defaults to True.
+        date_in_index (bool, optional): _description_. Defaults to True.
+        date_col (str, optional): _description_. Defaults to ''.
+
+    Returns:
+        _type_: _description_
+    """
+    
+    day = 24*60*60
+    year = (365.2425)*day
+
+    if date_in_index:
+        df['Day']=df.index.day
+        df['Month']=df.index.month
+        df['Year']=df.index.year
+        df['Day_week']=df.index.day_of_week
+        df['Week']=df.index.week
+        df['Hour']=df.index.hour
+        if sin_cos:
+            timestamp_s = df.index.map(pd.Timestamp.timestamp)
+    
+            df['Day_sin'] = np.sin(timestamp_s * (2 * np.pi / day))
+            df['Day_cos'] = np.cos(timestamp_s * (2 * np.pi / day))
+            df['Year_sin'] = np.sin(timestamp_s * (2 * np.pi / year))
+            df['Year_cos'] = np.cos(timestamp_s * (2 * np.pi / year))
+        return df
+    else:
+        df['Day']=df[date_col].day
+        df['Month']=df[date_col].month
+        df['Year']=df[date_col].year
+        df['Day_week']=df[date_col].day_of_week
+        df['Week']=df[date_col].week
+        df['Hour']=df[date_col].hour
+        if sin_cos:
+            timestamp_s = df[date_col].map(pd.Timestamp.timestamp).to_list()
+
+            df['Day_sin'] = np.sin(timestamp_s * (2 * np.pi / day))
+            df['Day_cos'] = np.cos(timestamp_s * (2 * np.pi / day))
+            df['Year_sin'] = np.sin(timestamp_s * (2 * np.pi / year))
+            df['Year_cos'] = np.cos(timestamp_s * (2 * np.pi / year))
+        return df
+
 def computeTrixIndicator(df,trix_length=9,trix_signal=21,col='Close',histo=True)->pd.DataFrame:
     """_summary_
 
@@ -169,6 +219,43 @@ def computeLaggingLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tr
             df['B_MLR_coefs_diff'] = df['B_MLR_coefs'].diff(3)
     return df.dropna()
 
+def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=True, filter_method:str='dwt',derivative:bool=True)->pd.DataFrame:
+    """Compute a future moving regression on a column with a window.
+
+    Args:
+        df (pd.DataFrame): The dataframe containing features.
+        col (str, optional): The column we apply Linear regression on. Defaults to "Close.
+        window (int, optional): The window we apply linear regression on. Defaults to 15.
+
+    Returns:
+        pd.DataFrame: The entry DataFrame we another column called M_MLR_coefs
+    """  
+    def computeLinearRegression(x,y)->float:
+        """Compute simple linear regression between 2 vectors x and y
+
+        Args:
+            x (np.array): x vector
+            y (np.array): y vector
+
+        Returns:
+            float: The coefficient a corresponding to the linear regression y=ax+b.
+        """
+        model = LinearRegression(n_jobs=cpu_count()).fit(x,y,)
+        return model.coef_[0]
+    
+    df['M_MLR_coefs'] = np.nan
+    df['M_MLR_coefs'].iloc[:-window] = [computeLinearRegression(df.Timestamp.values[i:i+window].reshape(-1, 1),
+                                                               df[col].values[i:i+window])
+                                       for i in range(len(df)-window)] 
+    df = df.dropna()
+    if filter_ceof==True:
+        df['M_MLR_coefs_filtered'] = filterData(df.M_MLR_coefs.values,filter_method)
+        if derivative==True:
+            df['M_MLR_coefs_filtered_diff'] = df['M_MLR_coefs_filtered'].diff(3)
+    else:
+        if derivative==True:
+            df['B_MLR_coefs_diff'] = df['B_MLR_coefs'].diff(3)
+    return df.dropna()
 
 def computeRSI_VWAP(df, rsi_window=25,vwap_window=19)->pd.DataFrame:
     """_summary_
@@ -183,7 +270,6 @@ def computeRSI_VWAP(df, rsi_window=25,vwap_window=19)->pd.DataFrame:
     """  
     df['RSI_VWAP'] = rsi(volume_weighted_average_price(df.High,df.Low,df.Close,df['Volume'],vwap_window),rsi_window)
     return df.dropna()
-
 
 def computeVMCCB(df:pd.DataFrame)->pd.DataFrame:
     class VMC():
@@ -383,7 +469,6 @@ def computeSuperTrend(df:pd.DataFrame,upper=False, lower=False)->pd.DataFrame:
         df['ST_Lower'] = st.superTrendLower()
     df['ST_Direction'] = st.superTrendDirection()
     return df
-
 
 def computeMASlope(df_true:pd.DataFrame)->pd.DataFrame:
     """Compute MA Slope indicator on a dataFrame.
