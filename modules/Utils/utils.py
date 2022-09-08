@@ -16,6 +16,56 @@ def loadFromDB(path:str, keep_timestamp:bool=True)->pd.DataFrame:
     #print(f"Total records : {len(df)} rows")
     return df
 
+def computeStochasticLinearRegression(df:pd.DataFrame, metric:str="Close", )->pd.DataFrame:
+    df_copy = df.copy()
+    a = list(df_copy[metric])
+    b = df_copy[metric].diff().fillna(0)
+    df_copy['stepsize']=b
+    c=list(df_copy.stepsize.abs())
+    import statistics as s
+    harmean=[0,0]
+    i=1
+    j=2
+    while j<len(c):
+        harsteps=s.harmonic_mean(c[i:j])
+        harmean.append(harsteps)
+        j+=1
+    df_copy['harmean of magnitude'] = harmean
+    j=1
+    countofup=[0,0]
+    probabilityofup = [0,0]
+    while j<len(b)-1:
+        if b[j]<0:
+            countofup.append(0)
+            a = sum(countofup)/j
+            probabilityofup.append(a)
+            j+=1
+        else: 
+            countofup.append(1)
+            p = sum(countofup)/j
+            probabilityofup.append(p)
+            j+=1
+        
+    df_copy['probabilityofup'] = probabilityofup
+    a=list(df_copy[metric])
+    b=list(df_copy['harmean of magnitude'])
+    c=list(df_copy['probabilityofup'])
+    import random
+    pred = [0,0]
+    i=1
+    while i<len(df_copy)-1:
+        if random.uniform(0,1)>c[i]:
+            prediction = a[i]+(b[i+1]*-1)
+            pred.append(prediction)
+            i+=1
+        else:
+            prediction = a[i]+(b[i+1]*1)
+            pred.append(prediction)
+            i+=1
+        
+    df['prediction']=pred
+    return  df.iloc[3:]
+    
 
 def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=True, filter_method:str='savgol',derivative:bool=True, stratify:bool=True)->pd.DataFrame:
     """Compute a lagging moving regression on a column with a window.
