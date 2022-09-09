@@ -218,44 +218,6 @@ def computeLaggingLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tr
             df['B_MLR_coefs_diff'] = df['B_MLR_coefs'].diff(3)
     return df.dropna()
 
-def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=True, filter_method:str='dwt',derivative:bool=True)->pd.DataFrame:
-    """Compute a future moving regression on a column with a window.
-
-    Args:
-        df (pd.DataFrame): The dataframe containing features.
-        col (str, optional): The column we apply Linear regression on. Defaults to "Close.
-        window (int, optional): The window we apply linear regression on. Defaults to 15.
-
-    Returns:
-        pd.DataFrame: The entry DataFrame we another column called M_MLR_coefs
-    """  
-    def computeLinearRegression(x,y)->float:
-        """Compute simple linear regression between 2 vectors x and y
-
-        Args:
-            x (np.array): x vector
-            y (np.array): y vector
-
-        Returns:
-            float: The coefficient a corresponding to the linear regression y=ax+b.
-        """
-        model = LinearRegression(n_jobs=cpu_count()).fit(x,y,)
-        return model.coef_[0]
-    
-    df['M_MLR_coefs'] = np.nan
-    df['M_MLR_coefs'].iloc[:-window] = [computeLinearRegression(df.Timestamp.values[i:i+window].reshape(-1, 1),
-                                                               df[col].values[i:i+window])
-                                       for i in range(len(df)-window)] 
-    df = df.dropna()
-    if filter_ceof==True:
-        df['M_MLR_coefs_filtered'] = filterData(df.M_MLR_coefs.values,filter_method)
-        if derivative==True:
-            df['M_MLR_coefs_filtered_diff'] = df['M_MLR_coefs_filtered'].diff(3)
-    else:
-        if derivative==True:
-            df['B_MLR_coefs_diff'] = df['B_MLR_coefs'].diff(3)
-    return df.dropna()
-
 def computeRSI_VWAP(df, rsi_window=25,vwap_window=19)->pd.DataFrame:
     """_summary_
 
