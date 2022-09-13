@@ -3,6 +3,11 @@ from datetime import datetime
 from sklearn.linear_model import LinearRegression
 import numpy as np
 from .filters import filterData
+import requests
+import json
+
+import pylab as pl
+from numpy import fft
 
 def loadFromDB(path:str, keep_timestamp:bool=True)->pd.DataFrame:
     df = pd.read_csv(path,names=['Date','Open','High','Low','Close','Volume'])
@@ -63,9 +68,35 @@ def computeStochasticLinearRegression(df:pd.DataFrame, metric:str="Close", )->pd
             pred.append(prediction)
             i+=1
         
-    df['prediction']=pred
+    df['Stochastic_prediction']=pred
     return  df.iloc[3:]
-    
+
+def getFearAndGreedIndicator(df:pd.DataFrame,keep_na:bool=True):
+    """Generate the fear and gred indicator throught alternative.me API. It only works for hourly df data.
+
+    Args:
+        df (pd.DataFrame): _description_
+        keep_na (bool, optional): _description_. Defaults to True.
+
+    Returns:
+        _type_: _description_
+    """
+    df_fng = pd.DataFrame(json.loads(requests.get('https://api.alternative.me/fng/?limit=0&format=json').text)['data'])
+    df_fng.drop(columns=['time_until_update'],inplace=True)
+    df_fng.rename(columns={'timestamp':'date'},inplace=True)
+    df_fng['date'] = df_fng['date'].astype(int).apply(lambda x: datetime.fromtimestamp(x))
+    df_fng.sort_values('date',inplace=True)
+    df_fng.set_index('date',inplace=True)
+    def addFNG(x):
+        try:
+            return int(df_fng.loc[pd.to_datetime(x.name).date().strftime("%Y-%m-%d")].value.values[0])
+        except:
+            return np.nan
+    df['FnG'] = df.apply(addFNG,axis=1)
+    if keep_na==False:
+        return df.dropna()
+    else:
+        return df
 
 def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=True, filter_method:str='savgol',derivative:bool=True, stratify:bool=True)->pd.DataFrame:
     """Compute a lagging moving regression on a column with a window.
@@ -108,7 +139,6 @@ def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tru
             quantiles = np.linspace(0,1,11)
             df['F_MLR_coefs_filtered_strat'] = pd.qcut(df.F_MLR_coefs_filtered,quantiles,labels=[i+1 for i in range(len(quantiles)-1)])
     return df.dropna()
-
 
 def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:int=1000, optimization_process:bool=False, stop_loss:bool=False, take_profit:bool=False, tp:int=0,sl:int=0)->pd.DataFrame:
     dfTest = df.copy()
@@ -309,3 +339,41 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
         print("\n----- Plot -----")
     else:
         return round(wallet, 2)
+
+def fourrierExtrapolation(data_to_predict:np.array, n_predict:int,has_trend:bool=True):
+    n = data_to_predict.size
+    n_harm = 50                     # number of harmonics in model
+    t = np.arange(0, n)
+    if has_trend==True:
+        p = np.polyfit(t, data_to_predict, 1)         # find linear trend in x
+        x_notrend = data_to_predict - p[0] * t        # detrended x
+        x_freqdom = fft.fft(x_notrend)  # detrended x in frequency domain
+        f = fft.fftfreq(n)              # frequencies
+        indexes = list(range(n))
+        #indexes = range(n)
+        # sort indexes by frequency, lower -> higher
+        indexes.sort(key = lambda i: np.absolute(f[i]))
+    
+        t = np.arange(0, n + n_predict)
+        restored_sig = np.zeros(t.size)
+        for i in indexes[:1 + n_harm * 2]:
+            ampli = np.absolute(x_freqdom[i]) / n   # amplitude
+            phase = np.angle(x_freqdom[i])          # phase
+            restored_sig += ampli * np.cos(2 * np.pi * f[i] * t + phase)
+        return restored_sig + p[0] * t   
+    else:
+        x_notrend = data_to_predict      # detrended x
+        x_freqdom = fft.fft(x_notrend)  # detrended x in frequency domain
+        f = fft.fftfreq(n)              # frequencies
+        indexes = list(range(n))
+        #indexes = range(n)
+        # sort indexes by frequency, lower -> higher
+        indexes.sort(key = lambda i: np.absolute(f[i]))
+    
+        t = np.arange(0, n + n_predict)
+        restored_sig = np.zeros(t.size)
+        for i in indexes[:1 + n_harm * 2]:
+            ampli = np.absolute(x_freqdom[i]) / n   # amplitude
+            phase = np.angle(x_freqdom[i])          # phase
+            restored_sig += ampli * np.cos(2 * np.pi * f[i] * t + phase)
+        return restored_sig
