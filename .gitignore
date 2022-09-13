@@ -5,3 +5,4 @@ venv
 *.7z
 *.h5
 *.csv
+*.tflite
