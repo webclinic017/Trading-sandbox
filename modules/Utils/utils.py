@@ -12,8 +12,13 @@ from PyEMD import EMD,CEEMDAN, EEMD
 from sklearn.feature_selection import mutual_info_regression
 import pylab as pl
 from numpy import fft
+from platform import system
 
-def loadFromDB(path:str, keep_timestamp:bool=True)->pd.DataFrame:
+def loadFromDB(symbol:str, timeframe:str='1h', keep_timestamp:bool=True)->pd.DataFrame:
+    if system()=='Linux':
+        path = f'../backtest_tools/database/database/Binance/{timeframe}/{symbol}-USDT.csv'
+    else:
+        path = f'./data/{timeframe}/{symbol}-USDT.csv'
     df = pd.read_csv(path,names=['Date','Open','High','Low','Close','Volume'])
     df = df.iloc[1:]
     df['Date'] = df['Date'].apply(lambda x: int(str(x)[:-3]))
