@@ -140,8 +140,8 @@ def generateDatesFeatures(df:pd.DataFrame,
         df['Hour']=df.index.hour
         if sin_cos:
             timestamp_s = df.index.map(pd.Timestamp.timestamp)
-            #df['Day_sin'] = np.sin(timestamp_s * (2 * np.pi / day))
-            #df['Day_cos'] = np.cos(timestamp_s * (2 * np.pi / day))
+            df['Day_sin'] = np.sin(timestamp_s * (2 * np.pi / day))
+            df['Day_cos'] = np.cos(timestamp_s * (2 * np.pi / day))
             df['Year_sin'] = np.sin(timestamp_s * (2 * np.pi / year))
             df['Year_cos'] = np.cos(timestamp_s * (2 * np.pi / year))
         return df
