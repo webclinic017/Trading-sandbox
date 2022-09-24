@@ -4,3 +4,4 @@ venv
 *.7z
 *.csv
 *.tflite
+*.npy
