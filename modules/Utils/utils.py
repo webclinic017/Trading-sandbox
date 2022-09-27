@@ -19,15 +19,24 @@ def loadFromDB(symbol:str, timeframe:str='1h', keep_timestamp:bool=True)->pd.Dat
         path = f'../backtest_tools/database/database/Binance/{timeframe}/{symbol}-USDT.csv'
     else:
         path = f'./data/{timeframe}/{symbol}-USDT.csv'
-    df = pd.read_csv(path,names=['Date','Open','High','Low','Close','Volume'])
-    df = df.iloc[1:]
-    df['Date'] = df['Date'].apply(lambda x: int(str(x)[:-3]))
-    df = df.astype(float)
+    
+    df = pd.read_csv(path,
+                     names=['Date','Open','High','Low','Close','Volume'],
+                     dtype={'Date':int,'Open':float,'High':float,'Low':float,'Close':float,'Volume':float},
+                     skiprows=[0],index_col='Date',
+                     date_parser=(lambda x: pd.to_datetime(x, unit='ms')),
+                     )
+    df.sort_index(inplace=True)
+    if timeframe=='1d' or timeframe=='1h' or timeframe=='4h' or timeframe=='12h' :
+        df = df.asfreq(timeframe)
+        df.fillna(method='ffill',inplace=True)
+    elif timeframe=='15m' or timeframe=='1m' or timeframe=='5m':
+        df = df.asfreq(timeframe+'in')
+        df.fillna(method='ffill',inplace=True)
+    else:
+        raise ValueError('Timeframe not supported')
     if keep_timestamp==True:
-        df['Timestamp'] = df['Date'].astype(int)
-    df['Date'] = df['Date'].astype(int).apply(datetime.fromtimestamp)
-    df = df.set_index('Date')
-    #print(f"Total records : {len(df)} rows")
+        df['Timestamp'] = [int(str(date)[:10]) for date in df.index.astype('int')]
     return df
 
 def computeStochasticLinearRegression(df:pd.DataFrame, metric:str="Close", )->pd.DataFrame:
