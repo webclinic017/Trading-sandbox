@@ -7,7 +7,7 @@ from multiprocessing import cpu_count
 # Technical indicators
 from ta.momentum import stochrsi,rsi
 from ta.trend import ema_indicator, macd_diff, vortex_indicator_neg, vortex_indicator_pos, adx, cci, sma_indicator
-from ta.volatility import bollinger_hband, bollinger_lband
+from ta.volatility import bollinger_hband, bollinger_lband, average_true_range
 from ta.volume import volume_weighted_average_price, ease_of_movement
 
 from .filters import filterData
@@ -38,7 +38,7 @@ def addIndicators(df:pd.DataFrame,b_engulfings:bool=False, derivative:bool=False
     df['Bollinger_low'] = bollinger_hband(df.Close,kwargs.get('bollinger_length',20),fillna=True)
     df['Bollinger_high'] = bollinger_lband(df.Close,kwargs.get('bollinger_length',20),fillna=True)
     df['ADX'] = adx(df.High,df.Low,df.Close,kwargs.get('adx_length',14))
-    df['ATR'] = adx(df.High,df.Low,df.Close,kwargs.get('atr_length',22))
+    df['ATR'] = average_true_range(df.High,df.Low,df.Close,kwargs.get('atr_length',10))
     df['CCI'] = cci(df.High,df.Low,df.Close,kwargs.get('cci_length',14))
     df['OVB'] = (np.sign(df.Close.diff())*df.Volume).fillna(0).cumsum()
     df['OVB_EMA200'] = ema_indicator(df.OVB,200)

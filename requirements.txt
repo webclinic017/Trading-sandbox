@@ -13,7 +13,6 @@ async-timeout
 attrs
 audioread
 backcall
-backports.zoneinfo
 Backtesting
 beautifulsoup4
 bleach
@@ -23,7 +22,6 @@ boto3
 botocore
 cachetools
 catalogue
-cctx
 ccxt
 certifi
 cffi
@@ -121,8 +119,6 @@ multidict
 multiprocess
 multitasking
 murmurhash
-mysql-connector-python
-mysqlclient
 nbclient
 nbconvert
 nbformat
