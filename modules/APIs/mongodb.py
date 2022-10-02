@@ -10,7 +10,7 @@ class mongoDB:
         Args:
             env (str, optional): The current environnement. Defaults to 'server'.
         """
-        with open('/var/www/crypto-data-alert//APIs/slack_channels.json') as json_file:
+        with open('./modules/APIs/slack_channels.json') as json_file:
             mongo_credentials = json.load(json_file)
         if env=='cloud':
             CONNECTION_STRING = f"mongodb+srv://{mongo_credentials['cloud']['user']}:{mongo_credentials['cloud']['password']}@{mongo_credentials['cloud']['host']}" #cloud
@@ -20,10 +20,10 @@ class mongoDB:
             CONNECTION_STRING = f"mongodb://{mongo_credentials['prod']['user']}:{mongo_credentials['prod']['password']}@{mongo_credentials['prod']['host']}:{mongo_credentials['prod']['port']}/?authSource=admin&readPreference=primary&ssl=false" #server
         mongo_client = MongoClient(CONNECTION_STRING)
         self._db = mongo_client['cryptos']
-        try:
-            self.createCollection('trade',True)
-        except:
-            return
+        #try:
+        #    self.createCollection('trade',True)
+        #except:
+        #    return
         
     def createCollection(self, collection_name:str,timeseries:bool=True)->None:
         """_summary_
