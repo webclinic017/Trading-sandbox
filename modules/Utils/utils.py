@@ -324,6 +324,7 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
         totalGoodTrades = dt.groupby('tradeIs')['date'].nunique()['Good']
         AveragePercentagePositivTrades = round(dt.loc[dt['tradeIs'] == 'Good', 'resultat%'].sum()
                                             / dt.loc[dt['tradeIs'] == 'Good', 'resultat%'].count(), 2)
+        MedianPercentagePositivTrades = round(dt.loc[dt['tradeIs'] == 'Good', 'resultat%'].median(), 2)
         idbest = dt.loc[dt['tradeIs'] == 'Good', 'resultat%'].idxmax()
         bestTrade = str(
             round(dt.loc[dt['tradeIs'] == 'Good', 'resultat%'].max(), 2))
@@ -338,6 +339,7 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
         totalBadTrades = dt.groupby('tradeIs')['date'].nunique()['Bad']
         AveragePercentageNegativTrades = round(dt.loc[dt['tradeIs'] == 'Bad', 'resultat%'].sum()
                                             / dt.loc[dt['tradeIs'] == 'Bad', 'resultat%'].count(), 2)
+        MedianPercentageNegativTrades = round(dt.loc[dt['tradeIs'] == 'Bad', 'resultat%'].median(), 2)
         idworst = dt.loc[dt['tradeIs'] == 'Bad', 'resultat%'].idxmin()
         worstTrade = round(dt.loc[dt['tradeIs'] == 'Bad', 'resultat%'].min(), 2)
     except:
@@ -373,7 +375,10 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
         print("Trades win rate ratio :", round(winRateRatio, 2), '%')
         print("Average trades performance :",tradesPerformance,"%")
         print("Average positive trades :", AveragePercentagePositivTrades, "%")
+        print("Median positive trades :", MedianPercentagePositivTrades, "%")
         print("Average negative trades :", AveragePercentageNegativTrades, "%")
+        print("Median negative trades :", MedianPercentageNegativTrades, "%")
+        
         dt[['wallet', 'price']].plot(subplots=True, figsize=(20, 10))
         print("\n----- Plot -----")
     else:
