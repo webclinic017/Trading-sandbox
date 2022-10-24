@@ -218,7 +218,7 @@ def computeLaggingLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tr
             df['B_MLR_coefs_diff'] = df['B_MLR_coefs'].diff(3)
     return df.dropna()
 
-def computeRSI_VWAP(df, rsi_window=25,vwap_window=19)->pd.DataFrame:
+def computeRSI_VWAP(df, rsi_window=25,vwap_window=19, stoch_rsi=False)->pd.DataFrame:
     """_summary_
 
     Args:
@@ -229,7 +229,10 @@ def computeRSI_VWAP(df, rsi_window=25,vwap_window=19)->pd.DataFrame:
     Returns:
         pd.DataFrame: The entry DataFrame with RSI_VWAP indicator column added.
     """  
-    df['RSI_VWAP'] = rsi(volume_weighted_average_price(df.High,df.Low,df.Close,df['Volume'],vwap_window),rsi_window)
+    if stoch_rsi==True:
+        df['RSI_VWAP'] = stochrsi(volume_weighted_average_price(df.High,df.Low,df.Close,df['Volume'],vwap_window),rsi_window)
+    else:
+        df['RSI_VWAP'] = rsi(volume_weighted_average_price(df.High,df.Low,df.Close,df['Volume'],vwap_window),rsi_window)
     return df.dropna()
 
 def computeVMCCB(df:pd.DataFrame)->pd.DataFrame:
