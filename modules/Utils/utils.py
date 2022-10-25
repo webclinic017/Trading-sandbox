@@ -179,7 +179,7 @@ def computeEMD(df,col:str="Close"):
     df['EMD_D']=deterministic_component
     return df
 
-def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:int=1000, optimization_process:bool=False, stop_loss:bool=False, take_profit:bool=False, tp:int=0,sl:int=0)->pd.DataFrame:
+def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:int=1000, optimization_process:bool=False, stop_loss:bool=False, take_profit:bool=False, tp:float=0,sl:float=0,)->pd.DataFrame:
     dfTest = df.copy()
 
     # -- Definition of dt, that will be the dataset to do your trades analyses --
@@ -237,7 +237,7 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
         # -- Stop Loss --
         elif row['Low'] < stopLoss and coin > 0:
             sellPrice = stopLoss
-            usdt = coin * sellPrice
+            usdt = coin * (sellPrice)
             fee = makerFee * usdt
             usdt = usdt - fee
             coin = 0
@@ -258,7 +258,7 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
         elif row['High'] > takeProfit and coin > 0:
             sellPrice = takeProfit
 
-            usdt = coin * sellPrice
+            usdt = coin * (sellPrice)
             fee = makerFee * usdt
             usdt = usdt - fee
             coin = 0
@@ -275,7 +275,7 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
 
             # -- You can define here at what price you buy --
             sellPrice = row['Close']
-            usdt = coin * sellPrice
+            usdt = coin * (sellPrice)
             fee = takerFee * usdt
             usdt = usdt - fee
             coin = 0
