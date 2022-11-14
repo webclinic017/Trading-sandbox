@@ -6,6 +6,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import PolynomialFeatures
 from scipy.signal import savgol_filter
 import statsmodels as sm
+from scipy.signal import butter,filtfilt
 
 
 def lowpassfilter(signal, thresh = 0.63, wavelet="db5")-> np.array:
@@ -228,3 +229,10 @@ def heat_analytical_smooth(prices: np.array,
         (bm*np.exp(-t*(M*np.pi/L)**2)).reshape(-1, 1)*sin_m_pi_x,
         axis = 0,
     )
+
+def butter_lowpass_filter(data):
+    fs = 1/300       # sample rate, Hz day :1/24/3600
+    cutoff = 0.1      # desired cutoff frequency of the filter, Hz, slightly higher than actual 1.2 Hz
+    b, a = butter(2, cutoff, btype='lowpass') #low pass filter
+    y = filtfilt(b, a, data)
+    return y

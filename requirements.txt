@@ -209,6 +209,7 @@ srsly
 stack-data
 statsmodels
 ta
+alpaca-trade-api
 tenacity
 tensorboard
 tensorboard-data-server
