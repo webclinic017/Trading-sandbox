@@ -201,6 +201,7 @@ sniffio
 SoundFile
 soupsieve
 spacy
+imbalanced-learn
 spacy-langdetect
 spacy-legacy
 spacy-loggers
