@@ -12,6 +12,51 @@ from ta.volume import volume_weighted_average_price, ease_of_movement
 
 from .filters import filterData
 
+def add_bearish_breakouts(df:pd.DataFrame):
+    df_2 = df.copy()
+    df_2['Open_Close'] = df_2.apply(lambda row: (row['Open']-row['Close'])/row['Open'],axis=1)
+    df_2['High_Low'] = df_2.apply(lambda row: (row['High']-row['Low'])/row['High'],axis=1)
+
+    df_2['Open_Close_1'] = df_2.Open_Close.shift(1)
+    df_2['Open_Close_2'] = df_2.Open_Close.shift(2)
+    df_2['Open_Close_3'] = df_2.Open_Close.shift(3)
+
+    def bearish_breakout(row):
+        if (row['Open_Close']<0 and
+            row['Open_Close_1']>0 and
+            row['Open_Close_2']>0 and
+            row['Open_Close_3']>0 and 
+            abs(row['Open_Close_1']+row['Open_Close_2']+row['Open_Close_3'])<=abs(row['High_Low'])):
+            return 1
+        else:
+            return 0
+
+    df['Bearish_breakout'] = df_2.apply(bearish_breakout,axis=1)
+    return df
+
+
+def add_bullish_breakouts(df:pd.DataFrame):
+    df_2 = df.copy()
+    df_2['Open_Close'] = df_2.apply(lambda row: (row['Open']-row['Close'])/row['Open'],axis=1)
+    df_2['High_Low'] = df_2.apply(lambda row: (row['High']-row['Low'])/row['High'],axis=1)
+
+    df_2['Open_Close_1'] = df_2.Open_Close.shift(1)
+    df_2['Open_Close_2'] = df_2.Open_Close.shift(2)
+    df_2['Open_Close_3'] = df_2.Open_Close.shift(3)
+
+
+    def bullish_breakout(row):
+        if (row['Open_Close']>0 and
+            row['Open_Close_1']<0 and
+            row['Open_Close_2']<0 and
+            row['Open_Close_3']<0 and 
+            abs(row['Open_Close_1']+row['Open_Close_2']+row['Open_Close_3'])<=abs(row['High_Low'])):
+            return 1
+        else:
+            return 0
+    df['Bullish_breakout'] = df_2.apply(bullish_breakout,axis=1)
+    return df
+
 def addIndicators(df:pd.DataFrame,b_engulfings:bool=False, derivative:bool=False, double_derivative:bool=False,heikin_ashi:bool=False,chandelier_exit:bool=False, **kwargs) -> pd.DataFrame:
     """Apply indicators to the DataFrame.
 

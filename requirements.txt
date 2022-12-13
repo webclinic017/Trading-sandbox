@@ -170,6 +170,7 @@ pymongo
 pyparsing
 pyrsistent
 pytest
+pyts
 python-binance
 python-dateutil
 python-speech-features
