@@ -1,4 +1,3 @@
-from curses import echo
 import json
 from pymongo import MongoClient
 import pymongo

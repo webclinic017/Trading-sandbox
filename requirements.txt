@@ -1,4 +1,5 @@
 absl-py
+afinn
 aiodns
 aiohttp
 aiosignal
