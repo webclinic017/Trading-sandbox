@@ -871,6 +871,21 @@ files = [
 ]
 
 [[package]]
+name = "get-all-tickers"
+version = "1.8"
+description = "get a Python list or download all publicly traded tickers"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "get_all_tickers-1.8.tar.gz", hash = "sha256:c5f9956d50ca01ce80d6e960b6f0db0d80e300c01cb9ad1ee9e608d0e4f64650"},
+]
+
+[package.dependencies]
+pandas = "*"
+requests = "*"
+
+[[package]]
 name = "google-auth"
 version = "2.16.0"
 description = "Google Authentication Library"
@@ -1905,10 +1920,7 @@ files = [
 ]
 
 [package.dependencies]
-numpy = [
-    {version = ">=1.21.0", markers = "python_version >= \"3.10\""},
-    {version = ">=1.23.2", markers = "python_version >= \"3.11\""},
-]
+numpy = {version = ">=1.21.0", markers = "python_version >= \"3.10\""}
 python-dateutil = ">=2.8.1"
 pytz = ">=2020.1"
 
@@ -2315,21 +2327,6 @@ files = [
 ]
 
 [[package]]
-name = "pyemd"
-version = "0.5.1"
-description = "A Python wrapper for Ofir Pele and Michael Werman's implementation of the Earth Mover's Distance."
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "pyemd-0.5.1-cp36-cp36m-macosx_10_13_x86_64.whl", hash = "sha256:15750113757ace54a03d2efef7bbc2c5a4782cba30555e7fd401bcafcfa0ecb2"},
-    {file = "pyemd-0.5.1.tar.gz", hash = "sha256:fc81c2116f8573e559dfbb8d73e03d9f73c22d0770559f406516984302e07e70"},
-]
-
-[package.dependencies]
-numpy = ">=1.9.0,<2.0.0"
-
-[[package]]
 name = "pygam"
 version = "0.8.0"
 description = "GAM toolkit"
@@ -2361,6 +2358,17 @@ files = [
 
 [package.extras]
 plugins = ["importlib-metadata"]
+
+[[package]]
+name = "pykalman"
+version = "0.9.5"
+description = "An implementation of the Kalman Filter, Kalman Smoother, and EM algorithm in Python"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pykalman-0.9.5.tar.gz", hash = "sha256:816af47720d924a4c6016fa74b9e2c8c21165a08d91693c322a1741e8e07fb38"},
+]
 
 [[package]]
 name = "pymongo"
@@ -3500,18 +3508,15 @@ files = [
 
 [[package]]
 name = "werkzeug"
-version = "2.2.2"
+version = "2.1.2"
 description = "The comprehensive WSGI web application library."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "Werkzeug-2.2.2-py3-none-any.whl", hash = "sha256:f979ab81f58d7318e064e99c4506445d60135ac5cd2e177a2de0089bfd4c9bd5"},
-    {file = "Werkzeug-2.2.2.tar.gz", hash = "sha256:7ea2d48322cc7c0f8b3a215ed73eabd7b5d75d0b50e31ab006286ccff9e00b8f"},
+    {file = "Werkzeug-2.1.2-py3-none-any.whl", hash = "sha256:72a4b735692dd3135217911cbeaa1be5fa3f62bffb8745c5215420a03dc55255"},
+    {file = "Werkzeug-2.1.2.tar.gz", hash = "sha256:1ce08e8093ed67d638d63879fd1ba3735817f7a80de3674d293f5984f25fb6e6"},
 ]
-
-[package.dependencies]
-MarkupSafe = ">=2.1.1"
 
 [package.extras]
 watchdog = ["watchdog"]
@@ -3732,5 +3737,5 @@ requests = ">=2.26"
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.10,<3.12"
-content-hash = "09c227ba813d49340c640bfe92a567f12d17cd9009a14434633fab9b82865e7d"
+python-versions = ">=3.10,<3.11"
+content-hash = "82e127e4f98f8dc1936af442808ebf9a07f9dadbe267299cb101214509f59a41"
