@@ -12,6 +12,26 @@ from ta.volume import volume_weighted_average_price, ease_of_movement
 
 from .filters import filterData
 
+def swing_indicator(df:pd.DataFrame, swing_window:int=8)->pd.Series:
+    df_cop = df.copy()
+    df_cop['upside_momentum_gauge'] = 0
+    df_cop.loc[(df_cop['High'] > df_cop['High'].shift(1)) & (df_cop['Close'] > df_cop['Open']), 'upside_momentum_gauge'] = 2
+    df_cop.loc[(df_cop['High'] > df_cop['High'].shift(1)) & (df_cop['Close'] < df_cop['Open']), 'upside_momentum_gauge'] = 1
+    df_cop.loc[(df_cop['High'] < df_cop['High'].shift(1)) & (df_cop['Close'] > df_cop['Open']), 'upside_momentum_gauge'] = 1
+    df_cop.loc[(df_cop['High'] < df_cop['High'].shift(1)) & (df_cop['Close'] < df_cop['Open']), 'upside_momentum_gauge'] = 0
+
+    df_cop['downside_momentum_gauge'] = 0
+    df_cop.loc[(df_cop['Low'] > df_cop['Low'].shift(1)) & (df_cop['Close'] > df_cop['Open']), 'downside_momentum_gauge'] = 0
+    df_cop.loc[(df_cop['Low'] > df_cop['Low'].shift(1)) & (df_cop['Close'] < df_cop['Open']), 'downside_momentum_gauge'] = 1
+    df_cop.loc[(df_cop['Low'] < df_cop['Low'].shift(1)) & (df_cop['Close'] > df_cop['Open']), 'downside_momentum_gauge'] = 1
+    df_cop.loc[(df_cop['Low'] < df_cop['Low'].shift(1)) & (df_cop['Close'] < df_cop['Open']), 'downside_momentum_gauge'] = 2
+
+    df_cop['raw_swing'] = df_cop['upside_momentum_gauge'] - df_cop['downside_momentum_gauge']
+
+    return df_cop['raw_swing'].rolling(swing_window).sum()
+    
+    
+
 def add_bearish_breakouts(df:pd.DataFrame):
     df_2 = df.copy()
     df_2['Open_Close'] = df_2.apply(lambda row: (row['Open']-row['Close'])/row['Open'],axis=1)
@@ -88,6 +108,7 @@ def addIndicators(df:pd.DataFrame,b_engulfings:bool=False, derivative:bool=False
     df['OVB'] = (np.sign(df.Close.diff())*df.Volume).fillna(0).cumsum()
     df['OVB_EMA200'] = ema_indicator(df.OVB,200)
     df['EVM'] = ease_of_movement(df.High,df.Low,df.Volume,kwargs.get('evm_length',14))
+    df['Swing'] = swing_indicator(df,kwargs.get('swing_window',8))
     if chandelier_exit==True:
         df['CE_long'] = np.nan
         df['CE_short'] = np.nan
