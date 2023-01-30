@@ -8,7 +8,7 @@ import json
 import numpy as np
 from scipy.fft import fft as scipy_fft
 import matplotlib.pyplot as plt
-from PyEMD import EMD,CEEMDAN, EEMD
+# from PyEMD import EMD,CEEMDAN, EEMD
 from sklearn.feature_selection import mutual_info_regression
 import pylab as pl
 from numpy import fft
@@ -16,7 +16,7 @@ from platform import system
 
 def loadFromDB(symbol:str, timeframe:str='1h', keep_timestamp:bool=True)->pd.DataFrame:
     if system()=='Linux':
-        path = f'../backtest_tools/database/database/Binance/{timeframe}/{symbol}-USDT.csv'
+        path = f'../data/{timeframe}/{symbol}-USDT.csv'
     else:
         path = f'./data/{timeframe}/{symbol}-USDT.csv'
     
@@ -158,26 +158,26 @@ def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tru
             df['F_MLR_coefs_filtered_strat'] = pd.qcut(df.F_MLR_coefs_filtered,quantiles,labels=[i+1 for i in range(len(quantiles)-1)])
     return df.dropna()
 
-def computeEMD(df,col:str="Close"):
-    def emd(signal):
-        return EMD(DTYPE=np.float16, spline_kind='cubic')(signal.values)
-    def phase_spectrum(imfs):
-        imfs_p = []
-        for i, imf in enumerate(imfs):
-            trans = scipy_fft(imf)
-            imfs_p.append(np.arctan(trans.imag / trans.real))           
-        return imfs_p
-    def phase_mi(phases):
-        return np.array([mutual_info_regression(phases[i].reshape(-1, 1), phases[i+1])[0] for i in range(len(phases)-1)])
-    def divide_signal(signal, imfs, mis, cutoff=0.75):
-        cut_point = np.where(mis > cutoff)[0][0]
-        return np.sum(imfs[:cut_point], axis=0), np.sum(imfs[cut_point:], axis=0)
-    imfs = emd(df[col])
+# def computeEMD(df,col:str="Close"):
+#     def emd(signal):
+#         return EMD(DTYPE=np.float16, spline_kind='cubic')(signal.values)
+#     def phase_spectrum(imfs):
+#         imfs_p = []
+#         for i, imf in enumerate(imfs):
+#             trans = scipy_fft(imf)
+#             imfs_p.append(np.arctan(trans.imag / trans.real))           
+#         return imfs_p
+#     def phase_mi(phases):
+#         return np.array([mutual_info_regression(phases[i].reshape(-1, 1), phases[i+1])[0] for i in range(len(phases)-1)])
+#     def divide_signal(signal, imfs, mis, cutoff=0.75):
+#         cut_point = np.where(mis > cutoff)[0][0]
+#         return np.sum(imfs[:cut_point], axis=0), np.sum(imfs[cut_point:], axis=0)
+#     imfs = emd(df[col])
 
-    stochastic_component, deterministic_component = divide_signal(df[col], imfs, phase_mi(phase_spectrum(imfs)),cutoff=0.96)
-    df['EMD_S']=stochastic_component
-    df['EMD_D']=deterministic_component
-    return df
+#     stochastic_component, deterministic_component = divide_signal(df[col], imfs, phase_mi(phase_spectrum(imfs)),cutoff=0.96)
+#     df['EMD_S']=stochastic_component
+#     df['EMD_D']=deterministic_component
+#     return df
 
 def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:int=1000, optimization_process:bool=False, stop_loss:bool=False, take_profit:bool=False, tp:float=0,sl:float=0,)->pd.DataFrame:
     dfTest = df.copy()

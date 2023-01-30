@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "trading-sandbox"
+version = "0.1.0"
+description = ""
+authors = ["BaptisteZloch <bzloch@hotmail.fr>"]
+readme = "README.md"
+packages = [{include = "src"},{include = "modules"]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+requests = "^2.28.2"
+numpy = "^1.24.1"
+pandas = "^1.5.3"
+tensorflow = "^2.11.0"
+scikit-learn = "^1.2.1"
+mlxtend = "^0.21.0"
+pytrends = "^4.9.0"
+bokeh = "^3.0.3"
+matplotlib = "^3.6.3"
+yfinance = "^0.2.9"
+tweepy = "^4.12.1"
+pygam = "^0.8.0"
+ta = "^0.10.2"
+statsmodels = "^0.13.5"
+hmmlearn = "^0.2.8"
+kucoin-python = "^1.0.11"
+ccxt = "^2.7.18"
+afinn = "^0.1"
+textblob = "^0.17.1"
+pymongo = "^4.3.3"
+pywavelets = "^1.4.1"
+dnspython = "^2.3.0"
+ipykernel = "^6.21.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
