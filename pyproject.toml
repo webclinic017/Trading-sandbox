@@ -33,6 +33,8 @@ ipykernel = "^6.21.0"
 numpy = "^1.24.1"
 get-all-tickers = "^1.8"
 pykalman = "^0.9.5"
+ruptures = "^1.1.7"
+full-fred = "^0.0.9a3"
 
 
 [build-system]
