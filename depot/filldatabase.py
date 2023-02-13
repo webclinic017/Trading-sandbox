@@ -35,7 +35,7 @@ def writeData(row_to_write,symbol):
     print('row stored !')
     
 def getData(symbol) -> pd.DataFrame:
-    klines = kc_market_client.get_kline(symbol,'1min', startAt=round(datetime.now().timestamp())-20000, endAt=round(datetime.now().timestamp()))
+    klines = kc_market_client.get_kline(symbol,'1hour', startAt=round(datetime.now().timestamp())-20000, endAt=round(datetime.now().timestamp()))
     klines_dataframe = pd.DataFrame(klines,columns=['Date','Open','High','Low','Close','Transaction volume','Transaction amount'],dtype=float)
     klines_dataframe = klines_dataframe.sort_values(by='Date')
     klines_dataframe.drop(columns=['Transaction volume','Transaction amount'])
