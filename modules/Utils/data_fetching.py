@@ -186,8 +186,8 @@ class CryptoService:
                         ]
                     )
 
-            elif jobs > 1 and jobs <= 50:
-                with ThreadPoolExecutor(max_workers=jobs) as executor:
+            elif jobs > 1 and jobs <= 25:
+                with ThreadPoolExecutor(max_workers=(len(timestamps) if len(timestamps) <= 25 else jobs)) as executor:
                     processes = [
                         executor.submit(
                             self.__get_data,
@@ -203,7 +203,7 @@ class CryptoService:
                     df = pd.concat([df, task.result()])
             else:
                 raise ValueError(
-                    "Error, jobs must be between 50 and 2 to use parallelism or -1 and 1 to do it sequentially."
+                    "Error, jobs must be between 25 and 2 to use parallelism or -1 and 1 to do it sequentially."
                 )
 
             df = df.sort_values(by="Timestamp")
@@ -212,7 +212,7 @@ class CryptoService:
 
     __kucoin_fetcher = KucoinDataFetcher()
     __base_dir = "../data/"
-    __absolute_start_date = "01-01-2017"
+    __absolute_start_date = "01-01-2021"
 
     def get_list_of_symbols(
         self, base_currency: Optional[str] = None, quote_currency: Optional[str] = None
@@ -353,155 +353,3 @@ class CryptoService:
         for tf in self.__kucoin_fetcher.timeframes:
             os.makedirs(f"{self.__base_dir}{tf}", exist_ok=True)
         os.makedirs(f"{self.__base_dir}list_available", exist_ok=True)
-
-
-import pandas as pd
-import os
-import time
-from kucoin.client import Market
-from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor
-
-
-def date_to_timestamp(to_convert: str):
-    """Convert a string date to a timestamp.
-
-
-    Returns:
-        float: The corresponding timestamp.
-    """
-    return datetime.strptime(to_convert, "%d-%m-%Y").timestamp()
-
-
-def construct_timestamp_list(
-    since: int, to: int, timeframe: str, exchange_limit: int = 1500
-) -> list[int]:
-    timeframes_in_s = {
-        "1min": 60,
-        "2min": 120,
-        "5min": 300,
-        "15min": 900,
-        "30min": 1800,
-        "1hour": 3600,
-        "2hour": 7200,
-        "4hour": 14400,
-        "12hour": 43200,
-        "1day": 86400,
-    }
-
-    timeframes = tuple(timeframes_in_s.keys())
-    assert timeframe in timeframes, f"Error, timeframe must be in {timeframes}"
-
-    start_timestamp = date_to_timestamp(since)
-    end_timestamp = date_to_timestamp(to)
-
-    assert (
-        start_timestamp < end_timestamp
-    ), "Error, the starting timestamp must be less than ending timestamp"
-
-    tot = (end_timestamp - start_timestamp) // timeframes_in_s[timeframe]
-
-    timestamp_i = end_timestamp
-    timestamps = [timestamp_i]
-
-    while tot > exchange_limit:
-        timestamp_i = timestamp_i - timeframes_in_s[timeframe] * exchange_limit
-        tot = tot - exchange_limit
-        timestamps.append(timestamp_i)
-
-    timestamps.append(start_timestamp)
-
-    return sorted(timestamps, reverse=True)
-
-
-client = Market(url="https://api.kucoin.com")
-
-
-def get_symbols() -> list[str]:
-    """Get a list of all symbols in kucoin
-
-    Returns:
-        list[str]: The symbol's list.
-    """
-    return [tik["symbol"] for tik in client.get_all_tickers()["ticker"]]
-
-
-def get_data(
-    symbol: str, start_at: int, end_at: int, timeframe: str = "15min"
-) -> pd.DataFrame:
-    """Function that uses Kucoin API to get the data for a specific symbol and timeframe.
-
-
-    Args:
-        symbol (str): The symbol for the data we want to extract. Defaults to "BTC-USDT".
-        start_at (int): The starting timestamp and. Note that this function could only outputs 1500 records. If the timeframe and the timestamps don't satisfy it, it will return a dataframe with 1500 records from the starting timestamp.
-        end_at (int): The ending timestamp.
-        timeframe (str, optional): The timeframe, it must be 1min, 2min, 5min, 15min, 1hour, 4hour, 1day... Defaults to '15min'.
-
-    Returns:
-        pd.DataFrame: The dataframe containing historical records.
-    """
-    assert (
-        symbol in get_symbols()
-    ), "Error, wrong symbol, provide something like 'BTC-USDT'."
-    passed = False
-    while passed == False:
-        try:
-            klines = client.get_kline(
-                f"{symbol}", timeframe, startAt=start_at, endAt=end_at
-            )
-            df = pd.DataFrame(
-                klines,
-                columns=["Date", "Open", "High", "Low", "Close", "Volume", "Amount"],
-                dtype=float,
-            )
-            df["Date"] = df["Date"].astype(int)
-            passed = True
-        except:
-            time.sleep(1)
-            pass
-    return df
-
-
-def download_data(symbol: str, since: str, timeframe: str, jobs: int = -1) -> None:
-    to = datetime.now().strftime("%d-%m-%Y")
-    timestamps = construct_timestamp_list(since, to, timeframe)
-    df = pd.DataFrame(
-        columns=["Date", "Open", "High", "Low", "Close", "Volume", "Amount"],
-        dtype=float,
-    )
-    if jobs == -1 or jobs == 1:
-        for i in range(len(timestamps) - 1):
-            df = pd.concat(
-                [df, get_data(symbol, timestamps[i + 1], timestamps[i], timeframe)]
-            )
-
-    elif jobs > 1 and jobs <= 20:
-        with ProcessPoolExecutor(max_workers=jobs) as executor:
-            processes = [
-                executor.submit(
-                    get_data, symbol, timestamps[i + 1], timestamps[i], timeframe
-                )
-                for i in range(len(timestamps) - 1)
-            ]
-
-        for task in as_completed(processes):
-            df = pd.concat([df, task.result()])
-
-        # with ThreadPoolExecutor(max_workers=5) as executor:
-        #     processes = [executor.submit(get_data, symbol,timestamps[i+1],timestamps[i],timeframe ) for i in range(len(timestamps)-1)]
-        # for task in as_completed(processes):
-        #     df = pd.concat([df,task.result()])
-    else:
-        raise ValueError(
-            "Error, jobs must be between 20 and 2 to parallelize or -1 and 1 to do it sequentially."
-        )
-
-    df = df.sort_values(by="Date")
-    df["Timestamp"] = df["Date"].astype(int)
-    df["Date"] = df["Date"].astype(int).apply(datetime.fromtimestamp)
-    df = df.set_index("Date")
-
-    if os.path.exists(f"../data/{timeframe}/"):
-        os.makedirs(f"../data/{timeframe}/")
-
-    df.to_csv(f"../data/{timeframe}/{symbol}.csv", sep=",", index=False)

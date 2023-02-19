@@ -35,6 +35,7 @@ get-all-tickers = "^1.8"
 pykalman = "^0.9.5"
 ruptures = "^1.1.7"
 full-fred = "^0.0.9a3"
+seaborn = "^0.12.2"
 
 
 [tool.poetry.group.dev.dependencies]
