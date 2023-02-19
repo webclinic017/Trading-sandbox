@@ -8,88 +8,120 @@ import json
 import numpy as np
 from scipy.fft import fft as scipy_fft
 import matplotlib.pyplot as plt
+
 # from PyEMD import EMD,CEEMDAN, EEMD
 from sklearn.feature_selection import mutual_info_regression
 import pylab as pl
 from numpy import fft
-from platform import system
+import os
 
-def loadFromDB(symbol:str, timeframe:str='1h', keep_timestamp:bool=True)->pd.DataFrame:
-    if system()=='Linux':
-        path = f'../data/{timeframe}/{symbol}-USDT.csv'
-    else:
-        path = f'./data/{timeframe}/{symbol}-USDT.csv'
-    
-    df = pd.read_csv(path,
-                     names=['Date','Open','High','Low','Close','Volume'],
-                     dtype={'Date':int,'Open':float,'High':float,'Low':float,'Close':float,'Volume':float},
-                     skiprows=[0],index_col='Date',
-                     date_parser=(lambda x: pd.to_datetime(x, unit='ms')),
-                     )
+from modules.Utils.data_fetching import CryptoService
+
+
+def loadFromDB(
+    symbol: str,
+    timeframe: str = "1h",
+    keep_timestamp: bool = True,
+) -> pd.DataFrame:
+    tf_binding = {
+        "1m": "1min",
+        "2m": "2min",
+        "5m": "5min",
+        "15m": "15min",
+        "30m": "30min",
+        "1h": "1hour",
+        "2h": "2hour",
+        "4h": "4hour",
+        "12h": "12hour",
+        "1d": "1day",
+    }
+    service = CryptoService()
+    # service.refresh_list_of_symbols()
+
+    df = service.get_history_of_symbol(f"{symbol}-USDT", tf_binding[timeframe])
+    df["Date"] = df["Timestamp"].apply(datetime.fromtimestamp)
+    df.set_index("Date",inplace=True)
     df.sort_index(inplace=True)
-    if timeframe=='1d' or timeframe=='1h' or timeframe=='4h' or timeframe=='12h' :
-        df = df.asfreq(timeframe)
-        df.fillna(method='ffill',inplace=True)
-    elif timeframe=='15m' or timeframe=='1m' or timeframe=='5m':
-        df = df.asfreq(timeframe+'in')
-        df.fillna(method='ffill',inplace=True)
-    else:
-        raise ValueError('Timeframe not supported')
-    if keep_timestamp==True:
-        df['Timestamp'] = [int(str(date)[:10]) for date in df.index.astype('int')]
+    # if (
+    #     timeframe == "1d"
+    #     or timeframe == "1h"
+    #     or timeframe == "4h"
+    #     or timeframe == "12h"
+    # ):
+    #     df = df.asfreq(timeframe)
+    #     df.fillna(method="ffill", inplace=True)
+    # elif (
+    #     timeframe == "15m"
+    #     or timeframe == "1m"
+    #     or timeframe == "5m"
+    #     or timeframe == "2m"
+    # ):
+    #     df = df.asfreq(tf_binding[timeframe])
+    #     df.fillna(method="ffill", inplace=True)
+    # else:
+    #     raise ValueError("Timeframe not supported")
+    # if keep_timestamp == True:
+    #     df["Timestamp"] = [int(str(date)[:10]) for date in df.index.astype("int")]
     return df
 
-def computeStochasticLinearRegression(df:pd.DataFrame, metric:str="Close", )->pd.DataFrame:
+
+def computeStochasticLinearRegression(
+    df: pd.DataFrame,
+    metric: str = "Close",
+) -> pd.DataFrame:
     df_copy = df.copy()
     a = list(df_copy[metric])
     b = df_copy[metric].diff().fillna(0)
-    df_copy['stepsize']=b
-    c=list(df_copy.stepsize.abs())
+    df_copy["stepsize"] = b
+    c = list(df_copy.stepsize.abs())
     import statistics as s
-    harmean=[0,0]
-    i=1
-    j=2
-    while j<len(c):
-        harsteps=s.harmonic_mean(c[i:j])
-        harmean.append(harsteps)
-        j+=1
-    df_copy['harmean of magnitude'] = harmean
-    j=1
-    countofup=[0,0]
-    probabilityofup = [0,0]
-    while j<len(b)-1:
-        if b[j]<0:
-            countofup.append(0)
-            a = sum(countofup)/j
-            probabilityofup.append(a)
-            j+=1
-        else: 
-            countofup.append(1)
-            p = sum(countofup)/j
-            probabilityofup.append(p)
-            j+=1
-        
-    df_copy['probabilityofup'] = probabilityofup
-    a=list(df_copy[metric])
-    b=list(df_copy['harmean of magnitude'])
-    c=list(df_copy['probabilityofup'])
-    import random
-    pred = [0,0]
-    i=1
-    while i<len(df_copy)-1:
-        if random.uniform(0,1)>c[i]:
-            prediction = a[i]+(b[i+1]*-1)
-            pred.append(prediction)
-            i+=1
-        else:
-            prediction = a[i]+(b[i+1]*1)
-            pred.append(prediction)
-            i+=1
-        
-    df['Stochastic_prediction']=pred
-    return  df.iloc[3:]
 
-def getFearAndGreedIndicator(df:pd.DataFrame,keep_na:bool=True):
+    harmean = [0, 0]
+    i = 1
+    j = 2
+    while j < len(c):
+        harsteps = s.harmonic_mean(c[i:j])
+        harmean.append(harsteps)
+        j += 1
+    df_copy["harmean of magnitude"] = harmean
+    j = 1
+    countofup = [0, 0]
+    probabilityofup = [0, 0]
+    while j < len(b) - 1:
+        if b[j] < 0:
+            countofup.append(0)
+            a = sum(countofup) / j
+            probabilityofup.append(a)
+            j += 1
+        else:
+            countofup.append(1)
+            p = sum(countofup) / j
+            probabilityofup.append(p)
+            j += 1
+
+    df_copy["probabilityofup"] = probabilityofup
+    a = list(df_copy[metric])
+    b = list(df_copy["harmean of magnitude"])
+    c = list(df_copy["probabilityofup"])
+    import random
+
+    pred = [0, 0]
+    i = 1
+    while i < len(df_copy) - 1:
+        if random.uniform(0, 1) > c[i]:
+            prediction = a[i] + (b[i + 1] * -1)
+            pred.append(prediction)
+            i += 1
+        else:
+            prediction = a[i] + (b[i + 1] * 1)
+            pred.append(prediction)
+            i += 1
+
+    df["Stochastic_prediction"] = pred
+    return df.iloc[3:]
+
+
+def getFearAndGreedIndicator(df: pd.DataFrame, keep_na: bool = True):
     """Generate the fear and gred indicator throught alternative.me API. It only works for hourly df data.
 
     Args:
@@ -99,24 +131,45 @@ def getFearAndGreedIndicator(df:pd.DataFrame,keep_na:bool=True):
     Returns:
         _type_: _description_
     """
-    df_fng = pd.DataFrame(json.loads(requests.get('https://api.alternative.me/fng/?limit=0&format=json').text)['data'])
-    df_fng.drop(columns=['time_until_update'],inplace=True)
-    df_fng.rename(columns={'timestamp':'date'},inplace=True)
-    df_fng['date'] = df_fng['date'].astype(int).apply(lambda x: datetime.fromtimestamp(x))
-    df_fng.sort_values('date',inplace=True)
-    df_fng.set_index('date',inplace=True)
+    df_fng = pd.DataFrame(
+        json.loads(
+            requests.get("https://api.alternative.me/fng/?limit=0&format=json").text
+        )["data"]
+    )
+    df_fng.drop(columns=["time_until_update"], inplace=True)
+    df_fng.rename(columns={"timestamp": "date"}, inplace=True)
+    df_fng["date"] = (
+        df_fng["date"].astype(int).apply(lambda x: datetime.fromtimestamp(x))
+    )
+    df_fng.sort_values("date", inplace=True)
+    df_fng.set_index("date", inplace=True)
+
     def addFNG(x):
         try:
-            return int(df_fng.loc[pd.to_datetime(x.name).date().strftime("%Y-%m-%d")].value.values[0])
+            return int(
+                df_fng.loc[
+                    pd.to_datetime(x.name).date().strftime("%Y-%m-%d")
+                ].value.values[0]
+            )
         except:
             return np.nan
-    df['FnG'] = df.apply(addFNG,axis=1)
-    if keep_na==False:
+
+    df["FnG"] = df.apply(addFNG, axis=1)
+    if keep_na == False:
         return df.dropna()
     else:
         return df
 
-def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=True, filter_method:str='savgol',derivative:bool=True, stratify:bool=True)->pd.DataFrame:
+
+def computeFutureLinearRegression(
+    df,
+    col="Close",
+    window=15,
+    filter_ceof: bool = True,
+    filter_method: str = "savgol",
+    derivative: bool = True,
+    stratify: bool = True,
+) -> pd.DataFrame:
     """Compute a lagging moving regression on a column with a window.
 
     Args:
@@ -126,8 +179,9 @@ def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tru
 
     Returns:
         pd.DataFrame: The entry DataFrame we another column called B_MLR_coefs
-    """  
-    def computeLinearRegression(x,y)->float:
+    """
+
+    def computeLinearRegression(x, y) -> float:
         """Compute simple linear regression between 2 vectors x and y
 
         Args:
@@ -137,26 +191,41 @@ def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tru
         Returns:
             float: The coefficient a corresponding to the linear regression y=ax+b.
         """
-        model = LinearRegression().fit(x,y)
+        model = LinearRegression().fit(x, y)
         return model.coef_[0]
-    
-    df['F_MLR_coefs'] = np.nan
-    df['F_MLR_coefs'].iloc[:-window] = [computeLinearRegression(df.Timestamp.values[i:i+window].reshape(-1, 1), df[col].values[i:i+window]) for i in range(len(df)-window)] 
+
+    df["F_MLR_coefs"] = np.nan
+    df["F_MLR_coefs"].iloc[:-window] = [
+        computeLinearRegression(
+            df.Timestamp.values[i : i + window].reshape(-1, 1),
+            df[col].values[i : i + window],
+        )
+        for i in range(len(df) - window)
+    ]
     df = df.dropna()
-    if filter_ceof==True:
-        df['F_MLR_coefs_filtered'] = filterData(df.F_MLR_coefs.values,filter_method)
-        if derivative==True:
-            df['F_MLR_coefs_filtered_diff'] = df['F_MLR_coefs_filtered'].diff()
-        if stratify==True:
-            quantiles = np.linspace(0,1,11)
-            df['F_MLR_coefs_filtered_strat'] = pd.qcut(df.F_MLR_coefs_filtered,quantiles,labels=[i+1 for i in range(len(quantiles)-1)])
+    if filter_ceof == True:
+        df["F_MLR_coefs_filtered"] = filterData(df.F_MLR_coefs.values, filter_method)
+        if derivative == True:
+            df["F_MLR_coefs_filtered_diff"] = df["F_MLR_coefs_filtered"].diff()
+        if stratify == True:
+            quantiles = np.linspace(0, 1, 11)
+            df["F_MLR_coefs_filtered_strat"] = pd.qcut(
+                df.F_MLR_coefs_filtered,
+                quantiles,
+                labels=[i + 1 for i in range(len(quantiles) - 1)],
+            )
     else:
-        if derivative==True:
-            df['F_MLR_coefs_diff'] = df['F_MLR_coefs'].diff()
-        if stratify==True:
-            quantiles = np.linspace(0,1,11)
-            df['F_MLR_coefs_filtered_strat'] = pd.qcut(df.F_MLR_coefs_filtered,quantiles,labels=[i+1 for i in range(len(quantiles)-1)])
+        if derivative == True:
+            df["F_MLR_coefs_diff"] = df["F_MLR_coefs"].diff()
+        if stratify == True:
+            quantiles = np.linspace(0, 1, 11)
+            df["F_MLR_coefs_filtered_strat"] = pd.qcut(
+                df.F_MLR_coefs_filtered,
+                quantiles,
+                labels=[i + 1 for i in range(len(quantiles) - 1)],
+            )
     return df.dropna()
+
 
 # def computeEMD(df,col:str="Close"):
 #     def emd(signal):
@@ -165,7 +234,7 @@ def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tru
 #         imfs_p = []
 #         for i, imf in enumerate(imfs):
 #             trans = scipy_fft(imf)
-#             imfs_p.append(np.arctan(trans.imag / trans.real))           
+#             imfs_p.append(np.arctan(trans.imag / trans.real))
 #         return imfs_p
 #     def phase_mi(phases):
 #         return np.array([mutual_info_regression(phases[i].reshape(-1, 1), phases[i+1])[0] for i in range(len(phases)-1)])
@@ -179,12 +248,35 @@ def computeFutureLinearRegression(df, col="Close",window=15,filter_ceof:bool=Tru
 #     df['EMD_D']=deterministic_component
 #     return df
 
-def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:int=1000, optimization_process:bool=False, stop_loss:bool=False, take_profit:bool=False, tp:float=0,sl:float=0,)->pd.DataFrame:
+
+def strategyTester(
+    df: pd.DataFrame,
+    buyConditonFunc,
+    sellConditionFunc,
+    equity: int = 1000,
+    optimization_process: bool = False,
+    stop_loss: bool = False,
+    take_profit: bool = False,
+    tp: float = 0,
+    sl: float = 0,
+) -> pd.DataFrame:
     dfTest = df.copy()
 
     # -- Definition of dt, that will be the dataset to do your trades analyses --
     dt = None
-    dt = pd.DataFrame(columns = ['date','position', 'reason', 'price', 'frais' ,'fiat', 'coins', 'wallet', 'drawBack'])
+    dt = pd.DataFrame(
+        columns=[
+            "date",
+            "position",
+            "reason",
+            "price",
+            "frais",
+            "fiat",
+            "coins",
+            "wallet",
+            "drawBack",
+        ]
+    )
 
     # -- You can change variables below --
     usdt = equity
@@ -201,19 +293,18 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
     takeProfit = 500000
     buyReady = True
     sellReady = True
-    
-        
+
     # -- Iteration on all your price dataset (df) --
     for index, row in dfTest.iterrows():
         # -- Buy market order --
         if buyConditonFunc(row, previousRow) and usdt > 0 and buyReady == True:
             # -- You can define here at what price you buy --
-            buyPrice = row['Close']
+            buyPrice = row["Close"]
 
             # -- Define the price of you SL and TP or comment it if you don't want a SL or TP --
             if take_profit == True:
                 takeProfit = buyPrice + tp * buyPrice
-                
+
             if stop_loss == True:
                 stopLoss = buyPrice - sl * buyPrice
 
@@ -221,7 +312,7 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
             fee = takerFee * coin
             coin = coin - fee
             usdt = 0
-            wallet = coin * row['Close']
+            wallet = coin * row["Close"]
 
             # -- Check if your wallet hit a new ATH to know the drawBack --
             if wallet > lastAth:
@@ -231,11 +322,21 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
             # print("Buy COIN at",buyPrice,'$ the', index)
 
             # -- Add the trade to DT to analyse it later --
-            myrow = {'date': index, 'position': "Buy", 'reason':'Buy Market Order','price': buyPrice,'frais': fee * row['Close'],'fiat': usdt,'coins': coin,'wallet': wallet,'drawBack':(wallet-lastAth)/lastAth}
-            dt = dt.append(myrow,ignore_index=True)
-        
+            myrow = {
+                "date": index,
+                "position": "Buy",
+                "reason": "Buy Market Order",
+                "price": buyPrice,
+                "frais": fee * row["Close"],
+                "fiat": usdt,
+                "coins": coin,
+                "wallet": wallet,
+                "drawBack": (wallet - lastAth) / lastAth,
+            }
+            dt = dt.append(myrow, ignore_index=True)
+
         # -- Stop Loss --
-        elif row['Low'] < stopLoss and coin > 0:
+        elif row["Low"] < stopLoss and coin > 0:
             sellPrice = stopLoss
             usdt = coin * (sellPrice)
             fee = makerFee * usdt
@@ -247,15 +348,25 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
             # -- Check if your wallet hit a new ATH to know the drawBack --
             if wallet > lastAth:
                 lastAth = wallet
-            
+
             # -- You can uncomment the line below if you want to see logs --
             # print("Sell COIN at Stop Loss",sellPrice,'$ the', index)
 
             # -- Add the trade to DT to analyse it later --
-            myrow = {'date': index,'position': "Sell", 'reason':'Sell Stop Loss','price': sellPrice,'frais': fee,'fiat': usdt,'coins': coin,'wallet': wallet,'drawBack':(wallet-lastAth)/lastAth}
-            dt = dt.append(myrow,ignore_index=True)    
+            myrow = {
+                "date": index,
+                "position": "Sell",
+                "reason": "Sell Stop Loss",
+                "price": sellPrice,
+                "frais": fee,
+                "fiat": usdt,
+                "coins": coin,
+                "wallet": wallet,
+                "drawBack": (wallet - lastAth) / lastAth,
+            }
+            dt = dt.append(myrow, ignore_index=True)
 
-        elif row['High'] > takeProfit and coin > 0:
+        elif row["High"] > takeProfit and coin > 0:
             sellPrice = takeProfit
 
             usdt = coin * (sellPrice)
@@ -267,14 +378,23 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
             if wallet > lastAth:
                 lastAth = wallet
             # print("Sell COIN at Take Profit Loss",sellPrice,'$ the', index)
-            myrow = {'date': index,'position': "Sell", 'reason': 'Sell Take Profit', 'price': sellPrice, 'frais': fee, 'fiat': usdt, 'coins': coin, 'wallet': wallet, 'drawBack':(wallet-lastAth)/lastAth}
-            dt = dt.append(myrow,ignore_index=True) 
-            
+            myrow = {
+                "date": index,
+                "position": "Sell",
+                "reason": "Sell Take Profit",
+                "price": sellPrice,
+                "frais": fee,
+                "fiat": usdt,
+                "coins": coin,
+                "wallet": wallet,
+                "drawBack": (wallet - lastAth) / lastAth,
+            }
+            dt = dt.append(myrow, ignore_index=True)
+
         # -- Sell Market Order --
         elif sellConditionFunc(row, previousRow) and coin > 0 and sellReady == True:
-
             # -- You can define here at what price you buy --
-            sellPrice = row['Close']
+            sellPrice = row["Close"]
             usdt = coin * (sellPrice)
             fee = takerFee * usdt
             usdt = usdt - fee
@@ -286,76 +406,107 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
             if wallet > lastAth:
                 lastAth = wallet
 
-            # -- You can uncomment the line below if you want to see logs --  
+            # -- You can uncomment the line below if you want to see logs --
             # print("Sell COIN at",sellPrice,'$ the', index)
 
             # -- Add the trade to DT to analyse it later --
-            myrow = {'date': index,'position': "Sell", 'reason':'Sell Market Order','price': sellPrice,'frais': fee,'fiat': usdt,'coins': coin,'wallet': wallet,'drawBack':(wallet-lastAth)/lastAth}
-            dt = dt.append(myrow,ignore_index=True)
-        
+            myrow = {
+                "date": index,
+                "position": "Sell",
+                "reason": "Sell Market Order",
+                "price": sellPrice,
+                "frais": fee,
+                "fiat": usdt,
+                "coins": coin,
+                "wallet": wallet,
+                "drawBack": (wallet - lastAth) / lastAth,
+            }
+            dt = dt.append(myrow, ignore_index=True)
+
         previousRow = row
 
     # -- BackTest Analyses --
-    dt = dt.set_index(dt['date'])
+    dt = dt.set_index(dt["date"])
     dt.index = pd.to_datetime(dt.index)
-    dt['resultat'] = dt['wallet'].diff()
-    dt['resultat%'] = dt['wallet'].pct_change()*100
-    dt.loc[dt['position']=='Buy','resultat'] = None
-    dt.loc[dt['position']=='Buy','resultat%'] = None
+    dt["resultat"] = dt["wallet"].diff()
+    dt["resultat%"] = dt["wallet"].pct_change() * 100
+    dt.loc[dt["position"] == "Buy", "resultat"] = None
+    dt.loc[dt["position"] == "Buy", "resultat%"] = None
 
-    dt['tradeIs'] = ''
-    dt.loc[dt['resultat']>0,'tradeIs'] = 'Good'
-    dt.loc[dt['resultat']<=0,'tradeIs'] = 'Bad'
+    dt["tradeIs"] = ""
+    dt.loc[dt["resultat"] > 0, "tradeIs"] = "Good"
+    dt.loc[dt["resultat"] <= 0, "tradeIs"] = "Bad"
 
-    iniClose = dfTest.iloc[0]['Close']
-    lastClose = dfTest.iloc[len(dfTest)-1]['Close']
-    holdPercentage = ((lastClose - iniClose)/iniClose) * 100
-    algoPercentage = ((wallet - initalWallet)/initalWallet) * 100
-    vsHoldPercentage = ((algoPercentage - holdPercentage)/holdPercentage) * 100
+    iniClose = dfTest.iloc[0]["Close"]
+    lastClose = dfTest.iloc[len(dfTest) - 1]["Close"]
+    holdPercentage = ((lastClose - iniClose) / iniClose) * 100
+    algoPercentage = ((wallet - initalWallet) / initalWallet) * 100
+    vsHoldPercentage = ((algoPercentage - holdPercentage) / holdPercentage) * 100
 
     try:
-        tradesPerformance = round(dt.loc[(dt['tradeIs'] == 'Good') | (dt['tradeIs'] == 'Bad'), 'resultat%'].sum()
-                / dt.loc[(dt['tradeIs'] == 'Good') | (dt['tradeIs'] == 'Bad'), 'resultat%'].count(), 2)
+        tradesPerformance = round(
+            dt.loc[
+                (dt["tradeIs"] == "Good") | (dt["tradeIs"] == "Bad"), "resultat%"
+            ].sum()
+            / dt.loc[
+                (dt["tradeIs"] == "Good") | (dt["tradeIs"] == "Bad"), "resultat%"
+            ].count(),
+            2,
+        )
     except:
         tradesPerformance = 0
         print("/!\ There is no Good or Bad Trades in your BackTest, maybe a problem...")
 
     try:
-        totalGoodTrades = dt.groupby('tradeIs')['date'].nunique()['Good']
-        AveragePercentagePositivTrades = round(dt.loc[dt['tradeIs'] == 'Good', 'resultat%'].sum()
-                                            / dt.loc[dt['tradeIs'] == 'Good', 'resultat%'].count(), 2)
-        MedianPercentagePositivTrades = round(dt.loc[dt['tradeIs'] == 'Good', 'resultat%'].median(), 2)
-        idbest = dt.loc[dt['tradeIs'] == 'Good', 'resultat%'].idxmax()
-        bestTrade = str(
-            round(dt.loc[dt['tradeIs'] == 'Good', 'resultat%'].max(), 2))
+        totalGoodTrades = dt.groupby("tradeIs")["date"].nunique()["Good"]
+        AveragePercentagePositivTrades = round(
+            dt.loc[dt["tradeIs"] == "Good", "resultat%"].sum()
+            / dt.loc[dt["tradeIs"] == "Good", "resultat%"].count(),
+            2,
+        )
+        MedianPercentagePositivTrades = round(
+            dt.loc[dt["tradeIs"] == "Good", "resultat%"].median(), 2
+        )
+        idbest = dt.loc[dt["tradeIs"] == "Good", "resultat%"].idxmax()
+        bestTrade = str(round(dt.loc[dt["tradeIs"] == "Good", "resultat%"].max(), 2))
     except:
         totalGoodTrades = 0
         AveragePercentagePositivTrades = 0
-        idbest = ''
+        idbest = ""
         bestTrade = 0
         print("/!\ There is no Good Trades in your BackTest, maybe a problem...")
 
     try:
-        totalBadTrades = dt.groupby('tradeIs')['date'].nunique()['Bad']
-        AveragePercentageNegativTrades = round(dt.loc[dt['tradeIs'] == 'Bad', 'resultat%'].sum()
-                                            / dt.loc[dt['tradeIs'] == 'Bad', 'resultat%'].count(), 2)
-        MedianPercentageNegativTrades = round(dt.loc[dt['tradeIs'] == 'Bad', 'resultat%'].median(), 2)
-        idworst = dt.loc[dt['tradeIs'] == 'Bad', 'resultat%'].idxmin()
-        worstTrade = round(dt.loc[dt['tradeIs'] == 'Bad', 'resultat%'].min(), 2)
+        totalBadTrades = dt.groupby("tradeIs")["date"].nunique()["Bad"]
+        AveragePercentageNegativTrades = round(
+            dt.loc[dt["tradeIs"] == "Bad", "resultat%"].sum()
+            / dt.loc[dt["tradeIs"] == "Bad", "resultat%"].count(),
+            2,
+        )
+        MedianPercentageNegativTrades = round(
+            dt.loc[dt["tradeIs"] == "Bad", "resultat%"].median(), 2
+        )
+        idworst = dt.loc[dt["tradeIs"] == "Bad", "resultat%"].idxmin()
+        worstTrade = round(dt.loc[dt["tradeIs"] == "Bad", "resultat%"].min(), 2)
     except:
         totalBadTrades = 0
         AveragePercentageNegativTrades = 0
-        idworst = ''
+        idworst = ""
         worstTrade = 0
         print("/!\ There is no Bad Trades in your BackTest, maybe a problem...")
 
     totalTrades = totalBadTrades + totalGoodTrades
-    winRateRatio = (totalGoodTrades/totalTrades) * 100
+    winRateRatio = (totalGoodTrades / totalTrades) * 100
 
-    reasons = dt['reason'].unique()
-    if optimization_process==False:
-        print("Period : [" + str(dfTest.index[0]) + "] -> [" +
-            str(dfTest.index[len(dfTest)-1]) + "]")
+    reasons = dt["reason"].unique()
+    if optimization_process == False:
+        print(
+            "Period : ["
+            + str(dfTest.index[0])
+            + "] -> ["
+            + str(dfTest.index[len(dfTest) - 1])
+            + "]"
+        )
         print("Starting balance :", initalWallet, "$")
 
         print("\n----- General Informations -----")
@@ -363,61 +514,64 @@ def strategyTester(df:pd.DataFrame,buyConditonFunc, sellConditionFunc, equity:in
         print("Performance vs US Dollar :", round(algoPercentage, 2), "%")
         print("Buy and Hold Performence :", round(holdPercentage, 2), "%")
         print("Performance vs Buy and Hold :", round(vsHoldPercentage, 2), "%")
-        print("Best trade : +"+bestTrade, "%, the", idbest)
+        print("Best trade : +" + bestTrade, "%, the", idbest)
         print("Worst trade :", worstTrade, "%, the", idworst)
-        print("Worst drawBack :", str(100*round(dt['drawBack'].min(), 2)), "%")
-        print("Total fees : ", round(dt['frais'].sum(), 2), "$")
+        print("Worst drawBack :", str(100 * round(dt["drawBack"].min(), 2)), "%")
+        print("Total fees : ", round(dt["frais"].sum(), 2), "$")
 
         print("\n----- Trades Informations -----")
-        print("Total trades on period :",totalTrades)
+        print("Total trades on period :", totalTrades)
         print("Number of positive trades :", totalGoodTrades)
         print("Number of negative trades : ", totalBadTrades)
-        print("Trades win rate ratio :", round(winRateRatio, 2), '%')
-        print("Average trades performance :",tradesPerformance,"%")
+        print("Trades win rate ratio :", round(winRateRatio, 2), "%")
+        print("Average trades performance :", tradesPerformance, "%")
         print("Average positive trades :", AveragePercentagePositivTrades, "%")
         print("Median positive trades :", MedianPercentagePositivTrades, "%")
         print("Average negative trades :", AveragePercentageNegativTrades, "%")
         print("Median negative trades :", MedianPercentageNegativTrades, "%")
-        
-        dt[['wallet', 'price']].plot(subplots=True, figsize=(20, 10))
+
+        dt[["wallet", "price"]].plot(subplots=True, figsize=(20, 10))
         print("\n----- Plot -----")
     else:
         return round(wallet, 2)
 
-def fourrierExtrapolation(data_to_predict:np.array, n_predict:int,has_trend:bool=True):
+
+def fourrierExtrapolation(
+    data_to_predict: np.array, n_predict: int, has_trend: bool = True
+):
     n = data_to_predict.size
-    n_harm = 50                     # number of harmonics in model
+    n_harm = 50  # number of harmonics in model
     t = np.arange(0, n)
-    if has_trend==True:
-        p = np.polyfit(t, data_to_predict, 1)         # find linear trend in x
-        x_notrend = data_to_predict - p[0] * t        # detrended x
+    if has_trend == True:
+        p = np.polyfit(t, data_to_predict, 1)  # find linear trend in x
+        x_notrend = data_to_predict - p[0] * t  # detrended x
         x_freqdom = fft.fft(x_notrend)  # detrended x in frequency domain
-        f = fft.fftfreq(n)              # frequencies
+        f = fft.fftfreq(n)  # frequencies
         indexes = list(range(n))
-        #indexes = range(n)
+        # indexes = range(n)
         # sort indexes by frequency, lower -> higher
-        indexes.sort(key = lambda i: np.absolute(f[i]))
-    
+        indexes.sort(key=lambda i: np.absolute(f[i]))
+
         t = np.arange(0, n + n_predict)
         restored_sig = np.zeros(t.size)
-        for i in indexes[:1 + n_harm * 2]:
-            ampli = np.absolute(x_freqdom[i]) / n   # amplitude
-            phase = np.angle(x_freqdom[i])          # phase
+        for i in indexes[: 1 + n_harm * 2]:
+            ampli = np.absolute(x_freqdom[i]) / n  # amplitude
+            phase = np.angle(x_freqdom[i])  # phase
             restored_sig += ampli * np.cos(2 * np.pi * f[i] * t + phase)
-        return restored_sig + p[0] * t   
+        return restored_sig + p[0] * t
     else:
-        x_notrend = data_to_predict      # detrended x
+        x_notrend = data_to_predict  # detrended x
         x_freqdom = fft.fft(x_notrend)  # detrended x in frequency domain
-        f = fft.fftfreq(n)              # frequencies
+        f = fft.fftfreq(n)  # frequencies
         indexes = list(range(n))
-        #indexes = range(n)
+        # indexes = range(n)
         # sort indexes by frequency, lower -> higher
-        indexes.sort(key = lambda i: np.absolute(f[i]))
-    
+        indexes.sort(key=lambda i: np.absolute(f[i]))
+
         t = np.arange(0, n + n_predict)
         restored_sig = np.zeros(t.size)
-        for i in indexes[:1 + n_harm * 2]:
-            ampli = np.absolute(x_freqdom[i]) / n   # amplitude
-            phase = np.angle(x_freqdom[i])          # phase
+        for i in indexes[: 1 + n_harm * 2]:
+            ampli = np.absolute(x_freqdom[i]) / n  # amplitude
+            phase = np.angle(x_freqdom[i])  # phase
             restored_sig += ampli * np.cos(2 * np.pi * f[i] * t + phase)
         return restored_sig
