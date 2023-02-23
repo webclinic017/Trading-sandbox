@@ -187,7 +187,9 @@ class CryptoService:
                     )
 
             elif jobs > 1 and jobs <= 25:
-                with ThreadPoolExecutor(max_workers=(len(timestamps) if len(timestamps) <= 25 else jobs)) as executor:
+                with ThreadPoolExecutor(
+                    max_workers=(len(timestamps) if len(timestamps) <= 25 else jobs)
+                ) as executor:
                     processes = [
                         executor.submit(
                             self.__get_data,
@@ -212,7 +214,7 @@ class CryptoService:
 
     __kucoin_fetcher = KucoinDataFetcher()
     __base_dir = "../data/"
-    __absolute_start_date = "01-01-2021"
+    __absolute_start_date = "01-01-2020"
 
     def get_list_of_symbols(
         self, base_currency: Optional[str] = None, quote_currency: Optional[str] = None

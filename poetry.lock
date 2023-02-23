@@ -1715,6 +1715,25 @@ files = [
 traitlets = "*"
 
 [[package]]
+name = "mfdfa"
+version = "0.4.3"
+description = "Multifractal Detrended Fluctuation Analysis in Python"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "MFDFA-0.4.3-py3-none-any.whl", hash = "sha256:8dc6772e2d2ffb8473b672fc4af422e073ef54d52dfe8b75f4d16a0c58f2f93c"},
+    {file = "MFDFA-0.4.3.tar.gz", hash = "sha256:bfada3b905ede27170ebf5dedca171bca75ab2cf608720c6c5c040457e3f6524"},
+]
+
+[package.dependencies]
+numpy = "*"
+
+[package.extras]
+emd-signal = ["EMD-signal"]
+matplotlib = ["matplotlib"]
+
+[[package]]
 name = "mlxtend"
 version = "0.21.0"
 description = "Machine Learning Library Extensions"
@@ -3907,4 +3926,4 @@ requests = ">=2.26"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.11"
-content-hash = "d317b27a0402d084f80ca1fb1f92c13edf8ec4a756e41fe61aa89a55d08a7e35"
+content-hash = "3dbc4bef6e70753b76683a8566801420dacd98834547c740a2159355d85e5a11"
